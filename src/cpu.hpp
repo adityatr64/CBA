@@ -74,6 +74,7 @@ class CPU
 private:
   Registers registers; // Instance of the Registers struct
   Memory &memory;      // Reference to your Memory object (you'll need this)
+  bool isThumbMode() const;
 
 public:
   CPU(Memory &mem); // Constructor takes a reference to memory
@@ -85,4 +86,7 @@ public:
   void executeInstruction();
 
   void run();
+  void decodeARM(uint32_t instruction);
+  void decodeThumb(uint16_t instruction);
+  void detectThumbInstruction();
 };

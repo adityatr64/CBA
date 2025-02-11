@@ -15,12 +15,11 @@ Memory::Memory() : bios(BIOS_SIZE),
                    oam(OAM_SIZE),
                    rom() // ROM size will be determined when loading
 {
-  std::cout << "Memory constructor called" << std::endl;
 }
 
 uint32_t Memory::readWord(uint32_t address) const
 {
-  std::cout << "readWord: Address: 0x" << std::hex << address << std::endl;
+  // std::cout << "readWord: Address: 0x" << std::hex << address << std::endl;
 
   size_t regionSize = 0;
   const std::vector<uint8_t> *region = nullptr; // Pointer to the correct vector
@@ -97,11 +96,11 @@ uint32_t Memory::readWord(uint32_t address) const
   uint8_t byte2 = (*region)[offset + 2];
   uint8_t byte3 = (*region)[offset + 3];
 
-  std::cout << "Bytes: 0x" << std::hex << (int)byte0 << " 0x" << (int)byte1 << " 0x" << (int)byte2 << " 0x" << (int)byte3 << std::endl;
+  // std::cout << "Bytes: 0x" << std::hex << (int)byte0 << " 0x" << (int)byte1 << " 0x" << (int)byte2 << " 0x" << (int)byte3 << std::endl;
 
   uint32_t word = (uint32_t)(byte0 | (byte1 << 8) | (byte2 << 16) | (byte3 << 24));
 
-  std::cout << "Word: 0x" << std::hex << word << std::endl;
+  // std::cout << "Word: 0x" << std::hex << word << std::endl;
 
   return word;
 }
@@ -203,7 +202,7 @@ uint32_t Memory::loadROM(const std::string &filename)
 
   // Read the entry point address from the ROM header (offset 0xAC)
   uint32_t entryPoint = rom[0xAC] | (rom[0xAD] << 8) | (rom[0xAE] << 16) | (rom[0xAF] << 24);
-  std::cout << "Entry point: 0x" << std::hex << entryPoint << std::endl;
+  // std::cout << "Entry point: 0x" << std::hex << entryPoint << std::endl;
 
   return entryPoint;
 }
@@ -235,7 +234,7 @@ void Memory::dumpROM() const
 
 uint16_t Memory::readHalfWord(uint32_t address) const
 {
-  std::cout << "readHalfWord: Address: 0x" << std::hex << address << std::endl;
+  // std::cout << "readHalfWord: Address: 0x" << std::hex << address << std::endl;
 
   size_t regionSize = 0;
   const std::vector<uint8_t> *region = nullptr; // Pointer to the correct vector
@@ -310,11 +309,11 @@ uint16_t Memory::readHalfWord(uint32_t address) const
   uint8_t byte0 = (*region)[offset];
   uint8_t byte1 = (*region)[offset + 1];
 
-  std::cout << "Bytes: 0x" << std::hex << (int)byte0 << " 0x" << std::hex << (int)byte1 << std::endl;
+  // std::cout << "Bytes: 0x" << std::hex << (int)byte0 << " 0x" << std::hex << (int)byte1 << std::endl;
 
   uint16_t halfWord = (uint16_t)(byte0 | (byte1 << 8));
 
-  std::cout << "HalfWord: 0x" << std::hex << halfWord << std::endl;
+  // std::cout << "HalfWord: 0x" << std::hex << halfWord << std::endl;
 
   return halfWord;
 }

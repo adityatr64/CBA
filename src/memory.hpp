@@ -17,6 +17,7 @@ private:
 
 public:
   Memory(); // Constructor
+  // For ARM mode
   uint32_t readWord(uint32_t address) const;
   void writeWord(uint32_t address, uint32_t value);
 
@@ -24,6 +25,7 @@ public:
   uint16_t readHalfWord(uint32_t address) const;
   void writeHalfWord(uint32_t address, uint16_t value);
 
+  // For both ARM and Thumb modes
   uint32_t loadROM(const std::string &filename);
   size_t getROMSize() const;
   void dumpROM() const;

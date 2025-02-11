@@ -59,7 +59,6 @@ struct Registers
 
   Registers() : sp(r[13]), lr(r[14]), pc(r[15]) {}
 };
-;
 /*  cpsr, sp, lr, pc: These are special registers:
     cpsr: The Current Program Status Register. It contains flags that control the CPU's state (e.g., N, Z, C, V flags).
     sp: The Stack Pointer. It points to the top of the stack in memory.
@@ -74,7 +73,6 @@ class CPU
 private:
   Registers registers; // Instance of the Registers struct
   Memory &memory;      // Reference to your Memory object (you'll need this)
-  bool isThumbMode() const;
 
 public:
   CPU(Memory &mem); // Constructor takes a reference to memory
@@ -89,4 +87,9 @@ public:
   void decodeARM(uint32_t instruction);
   void decodeThumb(uint16_t instruction);
   void detectThumbInstruction();
+  void executeLoadStore(uint32_t instruction);
+  void executeBranch(uint32_t instruction);
+  void executeUndefined(uint32_t instruction);
+  void executeALU(uint32_t instruction);
+  void updateFlags(uint32_t result, bool carry, bool overflow);
 };

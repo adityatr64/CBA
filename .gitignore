@@ -1,3 +1,40 @@
+# Ignore build directories
+build/
+bin/
+out/
+
+# Ignore object files and libraries
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+
+# Ignore executable files
+*.exe
+*.out
+
+# Ignore dependency files
+*.d
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignore CMake build files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Ignore test results
+/test-results/
 app
 build/*
 bin/*
+test/*

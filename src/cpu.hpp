@@ -6,49 +6,6 @@
 #define WIDTH 240
 #define HEIGHT 160
 
-// Memory sizes
-#define BIOS_SIZE 16 * 1024
-#define WRAM_SIZE 256 * 1024
-#define IWRAM_SIZE 32 * 1024
-#define VRAM_SIZE 96 * 1024
-#define OAM_SIZE 1 * 1024
-#define PALETTE_SIZE 1 * 1024
-
-#define BIOS_START 0x0000
-#define BIOS_END 0x3FFF
-
-// On-board RAM
-#define WRAM_START 0x02000000
-#define WRAM_END 0x0203FFFF
-
-// On-chip RAM
-#define IWRAM_START 0x03000000
-#define IWRAM_END 0x03007FFF
-
-// I/O Registers
-#define IO_START 0x04000000
-#define IO_END 0x040003FE
-
-// Palette RAM
-#define PALETTE_START 0x05000000
-#define PALETTE_END 0x050003FF
-
-// VRAM
-#define VRAM_START 0x06000000
-#define VRAM_END 0x06017FFF
-
-// OAM
-#define OAM_START 0x07000000
-#define OAM_END 0x070003FF
-
-// Game Pak ROM/FlashROM
-#define ROM_START 0x08000000
-#define ROM_END 0x09FFFFFF
-
-// Game Pak SRAM
-#define SRAM_START 0x0E000000
-#define SRAM_END 0x0E00FFFF
-
 struct Registers
 {
   uint32_t r[16]; // 16 general-purpose registers (r0-r15)
@@ -78,18 +35,19 @@ public:
   CPU(Memory &mem); // Constructor takes a reference to memory
 
   uint32_t readRegister(int index) const;
-
   void writeRegister(int index, uint32_t value);
-
   void executeInstruction();
 
   void run();
-  void decodeARM(uint32_t instruction);
   void decodeThumb(uint16_t instruction);
   void detectThumbInstruction();
-  void executeLoadStore(uint32_t instruction);
-  void executeBranch(uint32_t instruction);
-  void executeUndefined(uint32_t instruction);
-  void executeALU(uint32_t instruction);
+
+  void decodeARM(uint32_t instruction);
+  void executeArmLoadStore(uint32_t instruction);
+  void executeArmBranch(uint32_t instruction);
+  void executeArmUndefined(uint32_t instruction);
+  void executeArmALU(uint32_t instruction);
   void updateFlags(uint32_t result, bool carry, bool overflow);
+  uint32_t selectOperand2(uint32_t instruction, bool &carryOut);
+  uint32_t Shifter(uint32_t value, uint32_t type, uint32_t amount, bool &carryout);
 };

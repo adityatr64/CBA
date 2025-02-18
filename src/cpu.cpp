@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "memory.hpp"
 #include <ostream>
+#include <bitset>
 
 CPU::CPU(Memory &mem) : memory(mem) // Constructor
 {
@@ -104,7 +105,7 @@ void CPU::run()
     std::cout << "r3: " << std::hex << registers.r[3] << std::endl;
     std::cout << "r4: " << std::hex << registers.r[4] << std::endl;
     std::cout << "r5: " << std::hex << registers.r[5] << std::endl;
-    std::cout << "CPSR: " << std::hex << registers.cpsr << std::endl;
+    std::cout << "CPSR: " << std::bitset<32>(registers.cpsr) << std::endl;
     std::cout << "N (Negative): " << ((registers.cpsr >> 31) & 1) << std::endl;
     std::cout << "Z (Zero): " << ((registers.cpsr >> 30) & 1) << std::endl;
     std::cout << "C (Carry): " << ((registers.cpsr >> 29) & 1) << std::endl;

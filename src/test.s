@@ -1,8 +1,9 @@
 .global _start
 
-@ .syntax unified
-
 _start:
-    MOVs r0, #0x10       @ Load 0x10 into r0
-    b .
-.align 4
+
+    ldr r1, =0x02000008  @ Load the address directly
+    ldr r2, =0xABCDEF00  @ Valid 32-bit value
+    str r2, [r1]
+
+    b .  @ Infinite loop

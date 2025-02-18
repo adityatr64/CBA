@@ -306,7 +306,7 @@ void CPU::executeArmLoadStore(uint32_t instruction)
   uint32_t destReg = (instruction >> 12) & 0xF; // Destination/source register (Rd)
   uint32_t offset = instruction & 0xFFF;        // Immediate offset
 
-  uint32_t address = readRegister(baseReg) + offset;
+  uint32_t address = readRegister(baseReg) + offset + 4;
 
   switch (opcode & 0x0F)
   {

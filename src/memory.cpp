@@ -19,7 +19,7 @@ Memory::Memory() : bios(BIOS_SIZE),
 
 uint32_t Memory::readWord(uint32_t address) const
 {
-  // std::cout << "readWord: Address: 0x" << std::hex << address << std::endl;
+  std::cout << "readWord: Address: 0x" << std::hex << address << std::endl;
 
   size_t regionSize = 0;
   const std::vector<uint8_t> *region = nullptr; // Pointer to the correct vector

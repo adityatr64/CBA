@@ -47,6 +47,10 @@ public:
   void executeArmBranch(uint32_t instruction);
   void executeArmUndefined(uint32_t instruction);
   void executeArmALU(uint32_t instruction);
+  void executeArmBlockTransfer(uint32_t instruction);
+  void executeArmBranchLink(uint32_t instruction);
+  void executeArmSoftwareInterrupt(uint32_t instruction);
+
   void updateFlags(uint32_t result, bool carry, bool overflow);
   uint32_t selectOperand2(uint32_t instruction, bool &carryOut);
   uint32_t Shifter(uint32_t value, uint32_t type, uint32_t amount, bool &carryout);

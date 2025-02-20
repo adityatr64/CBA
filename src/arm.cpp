@@ -74,31 +74,63 @@ void CPU::decodeARM(uint32_t instruction)
   // Decoding the class of the instruction(bits 24 - 27)
   switch (instruction >> 24 & 0xF)
   {
-  case 0x0: // ALU
-  case 0x1: // ALU
-  case 0x2: // ALU
-  case 0x3: // ALU
-  case 0x4: // ALU
-  case 0x6: // ALU
-  case 0x7: // ALU
+  case 0x0:
+  case 0x1:
+  case 0x2:
+  case 0x3:
+  case 0x4:
+  case 0x6:
+  case 0x7:
   {
     executeArmALU(instruction);
-    break;
+    break; // ALU Instructions
   }
-  case 0xA: // Branch
-  {
-    executeArmBranch(instruction);
-    break;
-  }
-  case 0x5: // Load/Store
+  case 0x5:
   {
     executeArmLoadStore(instruction);
-    break;
+    break; // Load/Store Instructions
+  }
+  case 0x8:
+  {
+    executeArmBlockTransfer(instruction);
+    break; // STM (Store Multiple Registers)
+  }
+  case 0x9:
+  {
+    executeArmBlockTransfer(instruction);
+    break; // LDM (Load Multiple Registers)
+  }
+  case 0xA:
+  {
+    executeArmBranch(instruction);
+    break; // B (Branch)
+  }
+  case 0xB:
+  {
+    executeArmBranchLink(instruction);
+    break; // BL (Branch with Link)
+  }
+  case 0xC:
+  case 0xD:
+  {
+    // executeArmCoprocessorLoadStore(instruction);
+    break; // Coprocessor Load/Store
+  }
+  case 0xE:
+  {
+    // executeArmCoprocessorDataProcessing(instruction);
+    break; // Coprocessor Data Processing
+  }
+  case 0xF:
+  {
+    executeArmSoftwareInterrupt(instruction);
+    break; // SWI (Software Interrupt)
   }
   default:
   {
+
     executeArmUndefined(instruction);
-    break;
+    break; // Undefined Instructions
   }
   }
 }
@@ -292,6 +324,14 @@ void CPU::executeArmALU(uint32_t instruction)
     updateFlags(result, carryout, overflow);
 }
 
+void CPU::executeArmBranchLink(uint32_t instruction)
+{
+  // int32_t offset = (instruction & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
+  // offset = (offset << 6) >> 6;                    // Sign-extend the 26-bit offset
+  // writeRegister(14, registers.pc - 4);            // Save return address in LR (R14)
+  // registers.pc += offset + 4;
+}
+
 void CPU::executeArmBranch(uint32_t instruction)
 {
   int32_t offset = (instruction & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
@@ -328,6 +368,17 @@ void CPU::executeArmLoadStore(uint32_t instruction)
     break;
   }
   }
+}
+
+void CPU::executeArmBlockTransfer(uint32_t instruction)
+{
+  // Implementation of the ARM block transfer instruction
+  std::cerr << "ARM Block Transfer instruction: 0x" << std::hex << instruction << std::endl;
+}
+
+void CPU::executeArmSoftwareInterrupt(uint32_t instruction)
+{
+  std::cerr << "Software Interrupt: 0x" << std::hex << instruction << std::endl;
 }
 
 void CPU::executeArmUndefined(uint32_t instruction)

@@ -1,9 +1,11 @@
 .global _start
 
 _start:
+    mov r0, #0x11
+    swi 0x11
 
-    ldr r1, =0x02000008  @ Load the address directly
-    ldr r2, =0xABCDEF00  @ Valid 32-bit value
-    str r2, [r1]
+    mov r0, #0x00
+    mov r7, #1
+    swi 0x11
 
-    b .  @ Infinite loop
+    b .

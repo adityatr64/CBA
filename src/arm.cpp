@@ -1,19 +1,16 @@
-#include "cpu.hpp"
+#include "../headers/cpu.hpp"
 #include <iostream>
-#include "memory.hpp"
+#include "../headers/memory.hpp"
 /*
 I've split this to keep too much code accumulation in one file
 This file will contain the implementation of the ARM CPU class methods.
 */
+// This decode arm need to be fixed
 
-void CPU::decodeARM(uint32_t instruction)
+bool CPU::checkCondition(uint32_t inst)
 {
-  std::cout << "ARM Instruction: 0x" << std::hex << instruction << std::endl;
-
-  uint32_t condition = (instruction >> 28) & 0xF; // Extract condition field (bits 31-28)
+  uint32_t condition = (inst >> 28) & 0xF;
   bool execute = false;
-
-  // Condition check [COND] part of the instruction
   switch (condition)
   {
   case 0x0:                                      // EQ (Equal)
@@ -65,72 +62,111 @@ void CPU::decodeARM(uint32_t instruction)
     execute = false;
     break;
   }
+  return execute;
+}
 
-  if (!execute)
+void CPU::decodeARM(uint32_t inst)
+{
+  std::cout << "ARM inst: 0x" << std::hex << inst << std::endl;
+  if (!checkCondition(inst) || inst == 0)
   {
-    return; // Do not execute the instruction if the condition is not met
+    return;
   }
 
-  // Decoding the class of the instruction(bits 24 - 27)
-  switch (instruction >> 24 & 0xF)
+  uint32_t instClass = (inst >> 26) & 0b11;
+
+  switch (instClass)
   {
-  case 0x0:
-  case 0x1:
-  case 0x2:
-  case 0x3:
-  case 0x4:
-  case 0x6:
-  case 0x7:
+  case 0b00: // Data Processing
   {
-    executeArmALU(instruction);
-    break; // ALU Instructions
+    if (((inst & 0xFFFFFFF) >> 4) == 0x012FFF1) // Branch exchange
+    {
+      std::cout << "Branch and Exchange" << std::endl;
+      // executeArmBranchAndExchange();
+      break;
+    }
+    else if (((inst >> 4) & 0xFF) == 0b00001001 && ((inst >> 24) & 0x1) == 0b1) // SWP (bits 11-4 == 1001, bits 24 == 1)
+    {
+      std::cout << "Swap" << std::endl;
+      executeArmSWP(inst);
+      break;
+    }
+    else if (((inst >> 4) & 0xF) == 0b1001) // MUL/MLA (bits 7-4 == 1001)
+    {
+      if (inst & (1 << 21)) // Bit 21 -> MLA
+      {
+        std::cout << "Multiply Accumulate" << std::endl;
+        // executeArmMLA(inst);
+        break;
+      }
+      else
+      {
+        std::cout << "Multiply" << std::endl;
+        // executeArmMUL(inst);
+        break;
+      }
+      break;
+    }
+    else if (((inst >> 4) & 0xF) == 0b1011) // Single Data Transfer or Half-word transfer
+    {
+      if (((inst >> 4) & 0xF) == 0xD && ((inst >> 20) & 0xF) == 0x0)
+      {
+        std::cout << "Load Double Word" << std::endl;
+        // executeArmLDRD(inst);
+      }
+      else if (((inst >> 4) & 0xF) == 0xF && ((inst >> 20) & 0xF) == 0x0)
+      {
+        std::cout << "Store Double Word" << std::endl;
+        // executeArmSTRD(inst);
+      }
+      else if (((inst >> 5) & 0x3) == 0x1) // Half-word and signed transfers
+      {
+        std::cout << "Half-word/Signed Data Transfer" << std::endl;
+        // executeArmHalfWordTransfer(inst);
+      }
+      else // Regular ARM ALU operation
+      {
+        std::cout << "Data Processing" << std::endl;
+        executeArmALU(inst);
+      }
+      break;
+    }
+    else // Regular ARM ALU operation
+    {
+      std::cout << "Data Processing" << std::endl;
+      executeArmALU(inst);
+      break;
+    }
+    break;
   }
-  case 0x5:
+  case 0b01: // Load/Store
   {
-    executeArmLoadStore(instruction);
-    break; // Load/Store Instructions
+    executeArmLoadStore(inst);
+    break;
   }
-  case 0x8:
+  case 0b10: // Block Data Transfer
   {
-    executeArmBlockTransfer(instruction);
-    break; // STM (Store Multiple Registers)
+    // executeArmBlockTransfer(inst);
+    break;
   }
-  case 0x9:
+  case 0b11: // SWI/co processor
   {
-    executeArmBlockTransfer(instruction);
-    break; // LDM (Load Multiple Registers)
-  }
-  case 0xA:
-  {
-    executeArmBranch(instruction);
-    break; // B (Branch)
-  }
-  case 0xB:
-  {
-    executeArmBranchLink(instruction);
-    break; // BL (Branch with Link)
-  }
-  case 0xC:
-  case 0xD:
-  {
-    // executeArmCoprocessorLoadStore(instruction);
-    break; // Coprocessor Load/Store
-  }
-  case 0xE:
-  {
-    // executeArmCoprocessorDataProcessing(instruction);
-    break; // Coprocessor Data Processing
-  }
-  case 0xF:
-  {
-    executeArmSoftwareInterrupt(instruction);
-    break; // SWI (Software Interrupt)
+    std::cout << ((inst >> 24) & 0xF) << std::endl;
+    if (((inst >> 24) & 0xF) == 0xF)
+      executeArmSoftwareInterrupt(inst);
+    // {
+    //   executeArmBranchLink(inst);
+    // }
+    // else
+    // {
+    //   executeArmBranch(inst);
+    // }
+    break;
   }
   default:
   {
-
-    executeArmUndefined(instruction);
-    break; // Undefined Instructions
+    executeArmUndefined(inst);
+    break;
   }
   }
 }
@@ -171,11 +207,11 @@ uint32_t CPU::Shifter(uint32_t value, uint32_t type, uint32_t amount, bool &carr
   return value;
 }
 
-uint32_t CPU::selectOperand2(uint32_t instruction, bool &carryOut)
+uint32_t CPU::selectOperand2(uint32_t inst, bool &carryOut)
 {
-  uint32_t operand2 = instruction & 0xFFF;
+  uint32_t operand2 = inst & 0xFFF;
   carryOut = false;
-  if (instruction & (1 << 25))
+  if (inst & (1 << 25))
   {
     uint32_t imm = operand2 & 0xFF;                            // Lower 8 bits
     uint32_t rotate = (operand2 >> 8) & 0xF;                   // Upper 4 bits specify rotation
@@ -184,22 +220,22 @@ uint32_t CPU::selectOperand2(uint32_t instruction, bool &carryOut)
   else
   {
     uint32_t rm = operand2 & 0xF;
-    uint32_t shiftType = (instruction >> 5) & 0x3;
-    uint32_t shiftAmount = (instruction >> 7) & 0x1F;
+    uint32_t shiftType = (inst >> 5) & 0x3;
+    uint32_t shiftAmount = (inst >> 7) & 0x1F;
 
     return Shifter(readRegister(rm), shiftType, shiftAmount, carryOut);
   }
 }
 
-// Decode and execute ARM instructions
-void CPU::executeArmALU(uint32_t instruction)
+// Decode and execute ARM insts
+void CPU::executeArmALU(uint32_t inst)
 {
   // repeat parse bit 24
   bool carryout = false, overflow = false;
-  uint32_t opcode = (instruction >> 21) & 0xF; // Extract bits 24-21
-  uint32_t destReg = (instruction >> 12) & 0xF;
-  uint32_t sourceReg = (instruction >> 16) & 0xF;
-  uint32_t operand2 = selectOperand2(instruction, carryout);
+  uint32_t opcode = (inst >> 21) & 0xF; // Extract bits 24-21
+  uint32_t destReg = (inst >> 12) & 0xF;
+  uint32_t sourceReg = (inst >> 16) & 0xF;
+  uint32_t operand2 = selectOperand2(inst, carryout);
   uint32_t src = readRegister(sourceReg);
   uint32_t result = 0;
 
@@ -315,73 +351,118 @@ void CPU::executeArmALU(uint32_t instruction)
   }
   default:
   {
-    executeArmUndefined(instruction);
+    executeArmUndefined(inst);
     break;
   }
   }
   writeRegister(destReg, result);
-  if (instruction & (1 << 20))
+  if (inst & (1 << 20))
     updateFlags(result, carryout, overflow);
 }
 
-void CPU::executeArmBranchLink(uint32_t instruction)
+void CPU::executeArmBranchLink(uint32_t inst)
 {
-  // int32_t offset = (instruction & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
-  // offset = (offset << 6) >> 6;                    // Sign-extend the 26-bit offset
-  // writeRegister(14, registers.pc - 4);            // Save return address in LR (R14)
-  // registers.pc += offset + 4;
-}
-
-void CPU::executeArmBranch(uint32_t instruction)
-{
-  int32_t offset = (instruction & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
-  offset = (offset << 6) >> 6;                    // Sign-extend the 26-bit offset
+  int32_t offset = (inst & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
+  offset = (offset << 6) >> 6;             // Sign-extend the 26-bit offset
+  writeRegister(14, registers.pc - 4);     // Save return address in LR (R14)
   registers.pc += offset + 4;
 }
 
-void CPU::executeArmLoadStore(uint32_t instruction)
+void CPU::executeArmBranch(uint32_t inst)
 {
-  uint32_t opcode = (instruction >> 20) & 0xFF; // Extract bits 27-20
-  uint32_t baseReg = (instruction >> 16) & 0xF; // Base register (Rn)
-  uint32_t destReg = (instruction >> 12) & 0xF; // Destination/source register (Rd)
-  uint32_t offset = instruction & 0xFFF;        // Immediate offset
+  int32_t offset = (inst & 0xFFFFFF) << 2; // Extract 24-bit offset, multiply by 4
+  offset = (offset << 6) >> 6;             // Sign-extend the 26-bit offset
+  registers.pc += offset + 4;
+}
 
-  uint32_t address = readRegister(baseReg) + offset + 4;
+void CPU::executeArmLoadStore(uint32_t inst)
+{
+  uint32_t opcode = (inst >> 20) & 0x1;  // Extract bits 27-20
+  uint32_t baseReg = (inst >> 16) & 0xF; // Base register (Rn)
+  uint32_t destReg = (inst >> 12) & 0xF; // Destination/source register (Rd)
+  uint32_t offset = inst & 0xFFF;        // Immediate offset
+  bool byte = (inst >> 22) & 1;
 
-  switch (opcode & 0x0F)
+  if (baseReg == 15)
   {
-  case 0x09: // LDR (0x59)
+    offset += 4;
+  }
+  uint32_t address = readRegister(baseReg) + offset;
+
+  switch (opcode)
   {
-    uint32_t value = memory.readWord(address);
-    writeRegister(destReg, value);
+  case 0x1: // LDR (0x59)
+  {
+    if (byte)
+    {
+      uint8_t value = memory.readByte(address);
+      writeRegister(destReg, value);
+    }
+    else
+    {
+      uint32_t value = memory.readWord(address);
+      writeRegister(destReg, value);
+    }
     break;
   }
-  case 0x08: // STR (0x58)
+  case 0x0: // STR (0x58)
   {
-    uint32_t value = readRegister(destReg);
-    memory.writeWord(address, value);
+    if (byte)
+    {
+      uint8_t value = readRegister(destReg);
+      memory.writeByte(address, value);
+    }
+    else
+    {
+      uint32_t value = readRegister(destReg);
+      memory.writeWord(address, value);
+    }
     break;
   }
   default:
   {
-    std::cerr << "Unknown LDR/STR variant: 0x" << std::hex << instruction << std::endl;
+    std::cerr << "Unknown LDR/STR variant: 0x" << std::hex << inst << std::endl;
     break;
   }
   }
 }
 
-void CPU::executeArmBlockTransfer(uint32_t instruction)
+void CPU::executeArmBlockTransfer(uint32_t inst)
 {
-  // Implementation of the ARM block transfer instruction
-  std::cerr << "ARM Block Transfer instruction: 0x" << std::hex << instruction << std::endl;
+  // Implementation of the ARM block transfer inst
+  std::cerr << "ARM Block Transfer inst: 0x" << std::hex << inst << std::endl;
 }
 
-void CPU::executeArmSoftwareInterrupt(uint32_t instruction)
+void CPU::executeArmSoftwareInterrupt(uint32_t inst)
 {
-  std::cerr << "Software Interrupt: 0x" << std::hex << instruction << std::endl;
+  std::cerr << "Software Interrupt: 0x" << std::hex << inst << std::endl;
 }
 
-void CPU::executeArmUndefined(uint32_t instruction)
+void CPU::executeArmUndefined(uint32_t inst)
 {
-  std::cerr << "Unknown ARM instruction: 0x" << std::hex << instruction << std::endl;
+  std::cerr << "Unknown ARM inst: 0x" << std::hex << inst << std::endl;
+}
+
+void CPU::executeArmSWP(uint32_t inst)
+{
+  bool Byte = (inst >> 22) & 1;
+  uint32_t Rn = (inst >> 16) & 0xF;
+  uint32_t Rd = (inst >> 12) & 0xF;
+  uint32_t Rm = (inst & 0xF);
+
+  uint32_t address = readRegister(Rn);
+  uint32_t value = readRegister(Rm);
+
+  if (Byte)
+  {
+    uint8_t data = memory.readByte(address);
+    memory.writeByte(address, value & 0xFF);
+    writeRegister(Rd, data);
+  }
+  else
+  {
+    uint32_t data = memory.readWord(address);
+    memory.writeWord(address, value);
+    writeRegister(Rd, data);
+  }
 }

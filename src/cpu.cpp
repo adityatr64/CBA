@@ -1,80 +1,71 @@
 #include "../headers/cpu.hpp"
-#include <iostream>
-#include "../headers/memory.hpp"
-#include <stdint.h>
-#include <ostream>
-#include <bitset>
 
-CPU::CPU(Memory &mem) : memory(mem) // Constructor
+#include <stdint.h>
+
+#include <bitset>
+#include <iostream>
+#include <ostream>
+
+#include "../headers/memory.hpp"
+
+CPU::CPU(Memory &mem)
+    : memory(mem)  // Constructor
 {
-  for (int i = 0; i < 16; ++i)
-  {
+  for (int i = 0; i < 16; ++i) {
     registers.r[i] = 0;
   }
   registers.pc = ROM_START;
-  registers.cpsr = 0; // Initialize CPSR (Thumb mode is off by default)
+  registers.cpsr = 0;  // Initialize CPSR (Thumb mode is off by default)
 }
 
-void CPU::updateFlags(uint32_t result, bool carry, bool overflow)
-{
-  registers.cpsr &= ~(0xF << 28); // Clear N, Z, C, V flags (bits 28-31)
-  if (result == 0)                // Zero Flag (Z)
+void CPU::updateFlags(uint32_t result, bool carry, bool overflow) {
+  registers.cpsr &= ~(0xF << 28);  // Clear N, Z, C, V flags (bits 28-31)
+  if (result == 0)                 // Zero Flag (Z)
     registers.cpsr |= (1 << 30);
-  if (result & 0x80000000) // Negative Flag (N)
+  if (result & 0x80000000)  // Negative Flag (N)
     registers.cpsr |= (1 << 31);
-  if (carry) // Carry Flag (C)
+  if (carry)  // Carry Flag (C)
     registers.cpsr |= (1 << 29);
-  if (overflow) // Overflow Flag (V)
+  if (overflow)  // Overflow Flag (V)
     registers.cpsr |= (1 << 28);
 }
 
-void CPU::detectThumbinst()
-{
+void CPU::detectThumbinst() {
   uint16_t firstinst = memory.readHalfWord(ROM_START);
 
   // If the first inst is a valid Thumb inst, set the T bit in CPSR
-  if ((firstinst & 0xF800) == 0xE000 || // B (unconditional branch)
-      (firstinst & 0xF800) == 0x4800 || // LDR (literal)
-      (firstinst & 0xF800) == 0x4000)   // AND/OR/XOR/LSL/LSR/ASR
+  if ((firstinst & 0xF800) == 0xE000 ||  // B (unconditional branch)
+      (firstinst & 0xF800) == 0x4800 ||  // LDR (literal)
+      (firstinst & 0xF800) == 0x4000)    // AND/OR/XOR/LSL/LSR/ASR
   {
-    registers.cpsr |= 0x20; // Set T bit to enter Thumb mode
-  }
-  else
-  {
-    registers.cpsr &= ~0x20; // Clear T bit to enter ARM mode
+    registers.cpsr |= 0x20;  // Set T bit to enter Thumb mode
+  } else {
+    registers.cpsr &= ~0x20;  // Clear T bit to enter ARM mode
   }
 }
 
 // complex Register handling functions
-uint32_t CPU::readRegister(int index) const
-{
-  if (index < 0 || index > 15)
-  {
+uint32_t CPU::readRegister(int index) const {
+  if (index < 0 || index > 15) {
     return 0;
   }
   return registers.r[index];
 }
-void CPU::writeRegister(int index, uint32_t value)
-{
-  if (index < 0 || index > 15)
-  {
+void CPU::writeRegister(int index, uint32_t value) {
+  if (index < 0 || index > 15) {
     std::cout << "Invalid register index: " << index << std::endl;
     return;
   }
   registers.r[index] = value;
 }
 
-void CPU::executeinst()
-{
-  if ((registers.cpsr & 0x20) != 0)
-  {
+void CPU::executeinst() {
+  if ((registers.cpsr & 0x20) != 0) {
     // Thumb mode: 16-bit inst
     uint16_t inst = memory.readHalfWord(registers.pc);
     registers.pc += 2;
     decodeThumb(inst);
-  }
-  else
-  {
+  } else {
     // ARM mode: 32-bit inst
     // The ARM inst is always word-aligned, so we can read 4 bytes directly
     // The functions are defined in arm.cpp
@@ -85,13 +76,11 @@ void CPU::executeinst()
 }
 
 // Run the CPU
-void CPU::run()
-{
+void CPU::run() {
   detectThumbinst();
   std::cout << "ROM Size: " << memory.getROMSize() << std::endl;
   memory.dumpROM();
-  for (;;)
-  {
+  for (;;) {
     executeinst();
     std::cout << "r0: " << std::hex << registers.r[0] << std::endl;
     std::cout << "r1: " << std::hex << registers.r[1] << std::endl;

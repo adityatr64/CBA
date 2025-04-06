@@ -3,11 +3,11 @@
 .section .text
 .align 4
 _start:
-
-    LDR r1, =halfword_data
-    LDRH r2, [r1]
-    MOV r7, #1
-    MOV r0, #0
+    MOV r0, #5
+    MOV r1, #10
+    MOV r2, #2
+    MLA r3, r1, r2, r0
+    MUL r4, r1, r2
     swi 0x11
 
 .section .data

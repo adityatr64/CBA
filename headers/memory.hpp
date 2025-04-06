@@ -1,11 +1,10 @@
 #pragma once
-#include <vector>
 #include <cstdint>
 #include <string>
+#include <vector>
 
-class Memory
-{
-private:
+class Memory {
+ private:
   std::vector<uint8_t> bios;
   std::vector<uint8_t> wram;
   std::vector<uint8_t> iwram;
@@ -15,8 +14,8 @@ private:
   std::vector<uint8_t> oam;
   std::vector<uint8_t> rom;
 
-public:
-  Memory(); // Constructor
+ public:
+  Memory();  // Constructor
   // For ARM mode
   uint32_t readWord(uint32_t address) const;
   void writeWord(uint32_t address, uint32_t value);
@@ -33,6 +32,10 @@ public:
   size_t getROMSize() const;
   void dumpROM() const;
 };
+
+// Screen dimensions
+#define WIDTH 240
+#define HEIGHT 160
 
 // Memory sizes
 #define BIOS_SIZE 16 * 1024

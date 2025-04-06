@@ -2,10 +2,12 @@
 
 #include "../headers/cpu.hpp"
 #include "../headers/memory.hpp"
+
 /*
 I've split this to keep too much code accumulation in one file
 This file will contain the implementation of the ARM CPU class methods.
 */
+
 // This decode arm need to be fixed
 
 bool CPU::checkCondition(uint32_t inst) {
@@ -96,16 +98,7 @@ void CPU::decodeARM(uint32_t inst) {
         break;
       } else if (((inst >> 4) & 0xF) == 0b1001)  // MUL/MLA (bits 7-4 == 1001)
       {
-        if (inst & (1 << 21))  // Bit 21 -> MLA
-        {
-          std::cout << "Multiply Accumulate" << std::endl;
-          // executeArmMLA(inst);
-          break;
-        } else {
-          std::cout << "Multiply" << std::endl;
-          // executeArmMUL(inst);
-          break;
-        }
+        executeArmMultiply(inst);
         break;
       } else if (((inst >> 4) & 0xF) == 0b1011)  // Single Data Transfer or Half-word transfer
       {
@@ -163,56 +156,127 @@ void CPU::decodeARM(uint32_t inst) {
   }
 }
 
-uint32_t CPU::Shifter(uint32_t value, uint32_t type, uint32_t amount, bool& carryout) {
-  switch (type) {
-    case 0:  // LSL (Logical Shift Left)
-      carryout = (amount > 0) ? (value & (1 << (32 - amount))) : false;
-      value <<= amount;
-      break;
-    case 1:  // LSR (Logical Shift Right)
-      carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
-      value = (amount == 0) ? 0 : (value >> amount);
-      break;
-    case 2:  // ASR (Arithmetic Shift Right)
-      carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
-      value = (amount == 0) ? (value >> 31) : ((int32_t)value >> amount);
-      break;
-    case 3:  // ROR (Rotate Right)
-      if (amount == 0) {
-        // RRX (Rotate Right with Extend)
-
-        carryout = (value & 1);
-        value = (registers.cpsr & (1 << 29)) ? (value >> 1) | 0x80000000 : (value >> 1);
-      } else {
-        carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
-        value = (value >> amount) | (value << (32 - amount));
-      }
-      break;
-    default:
-      return value;
-  }
-  return value;
-}
-
-uint32_t CPU::selectOperand2(uint32_t inst, bool& carryOut) {
-  uint32_t operand2 = inst & 0xFFF;
-  carryOut = false;
-  if (inst & (1 << 25)) {
-    uint32_t imm = operand2 & 0xFF;                             // Lower 8 bits
-    uint32_t rotate = (operand2 >> 8) & 0xF;                    // Upper 4 bits specify rotation
-    return (imm >> (2 * rotate)) | (imm << (32 - 2 * rotate));  // Rotate right
-  } else {
-    uint32_t rm = operand2 & 0xF;
-    uint32_t shiftType = (inst >> 5) & 0x3;
-    uint32_t shiftAmount = (inst >> 7) & 0x1F;
-
-    return Shifter(readRegister(rm), shiftType, shiftAmount, carryOut);
-  }
-}
 
 // Decode and execute ARM insts
+
+void CPU::executeArmBranchLink(uint32_t inst) {
+  int32_t offset = (inst & 0xFFFFFF) << 2;  // Extract 24-bit offset, multiply by 4
+  offset = (offset << 6) >> 6;              // Sign-extend the 26-bit offset
+  writeRegister(14, registers.pc - 4);      // Save return address in LR (R14)
+  registers.pc += offset + 4;
+}
+
+void CPU::executeArmBranch(uint32_t inst) {
+  int32_t offset = (inst & 0xFFFFFF) << 2;  // Extract 24-bit offset, multiply by 4
+  offset = (offset << 6) >> 6;              // Sign-extend the 26-bit offset
+  registers.pc += offset + 4;
+}
+
+void CPU::executeArmBlockTransfer(uint32_t inst) {
+  // Implementation of the ARM block transfer inst
+  std::cerr << "ARM Block Transfer inst: 0x" << std::hex << inst << std::endl;
+}
+
+void CPU::executeArmSoftwareInterrupt(uint32_t inst) {
+  std::cerr << "Software Interrupt: 0x" << std::hex << inst << std::endl;
+  exit(0);
+}
+
+void CPU::executeArmLoadStore(uint32_t inst) {
+  uint32_t opcode = (inst >> 20) & 0x1;   // Extract bits 27-20
+  uint32_t baseReg = (inst >> 16) & 0xF;  // Base register (Rn)
+  uint32_t destReg = (inst >> 12) & 0xF;  // Destination/source register (Rd)
+  uint32_t offset = inst & 0xFFF;         // Immediate offset
+  bool byte = (inst >> 22) & 1;
+
+  if (baseReg == 15) {
+    offset += 4;
+  }
+  uint32_t address = readRegister(baseReg) + offset;
+
+  switch (opcode) {
+    case 0x1:  // LDR (0x59)
+    {
+      if (byte) {
+        uint8_t value = memory.readByte(address);
+        writeRegister(destReg, value);
+      } else {
+        uint32_t value = memory.readWord(address);
+        writeRegister(destReg, value);
+      }
+      break;
+    }
+    case 0x0:  // STR (0x58)
+    {
+      if (byte) {
+        uint8_t value = readRegister(destReg);
+        memory.writeByte(address, value);
+      } else {
+        uint32_t value = readRegister(destReg);
+        memory.writeWord(address, value);
+      }
+      break;
+    }
+    default: {
+      std::cerr << "Unknown LDR/STR variant: 0x" << std::hex << inst << std::endl;
+      break;
+    }
+  }
+}
+
+void CPU::executeArmUndefined(uint32_t inst) {
+  std::cerr << "Unknown ARM inst: 0x" << std::hex << inst << std::endl;
+}
+
+void CPU::executeArmSWP(uint32_t inst) {
+  bool Byte = (inst >> 22) & 1;
+  uint32_t Rn = (inst >> 16) & 0xF;
+  uint32_t Rd = (inst >> 12) & 0xF;
+  uint32_t Rm = (inst & 0xF);
+
+  uint32_t address = readRegister(Rn);
+  uint32_t value = readRegister(Rm);
+
+  if (Byte) {
+    uint8_t data = memory.readByte(address);
+    memory.writeByte(address, value & 0xFF);
+    writeRegister(Rd, data);
+  } else {
+    uint32_t data = memory.readWord(address);
+    memory.writeWord(address, value);
+    writeRegister(Rd, data);
+  }
+}
+
+void CPU::executeArmMultiply(uint32_t inst) {
+  bool accumulate = (inst >> 21) & 0x1;
+
+  uint32_t Rd = (inst >> 16) & 0xF;
+  uint32_t Rn = (inst >> 12) & 0xF;
+  uint32_t Rs = (inst >> 8) & 0xF;
+  uint32_t Rm = (inst & 0xF);
+
+  uint32_t operand1 = readRegister(Rm);
+  uint32_t operand2 = readRegister(Rs);
+  uint32_t result;
+
+  if (accumulate) {
+    result = readRegister(Rn) + (operand1 * operand2);
+    std::cout << "MLA: R" << Rd << " = R" << Rn << " + (R" << Rm << " * R" << Rs << ")"
+              << std::endl;
+  } else {
+    result = operand1 * operand2;
+    std::cout << "MUL: R" << Rd << " = R" << Rm << " * R" << Rs << std::endl;
+  }
+
+  writeRegister(Rd, result);
+  updateFlags(result, false, false);  // As before, MUL/MLA don’t set C or V
+
+  std::cout << "Result: " << std::hex << result << std::endl;
+  std::cout << "CPSR: " << std::hex << registers.cpsr << std::endl;
+}
+
 void CPU::executeArmALU(uint32_t inst) {
-  // repeat parse bit 24
   bool carryout = false, overflow = false;
   uint32_t opcode = (inst >> 21) & 0xF;  // Extract bits 24-21
   uint32_t destReg = (inst >> 12) & 0xF;
@@ -339,90 +403,49 @@ void CPU::executeArmALU(uint32_t inst) {
   if (inst & (1 << 20)) updateFlags(result, carryout, overflow);
 }
 
-void CPU::executeArmBranchLink(uint32_t inst) {
-  int32_t offset = (inst & 0xFFFFFF) << 2;  // Extract 24-bit offset, multiply by 4
-  offset = (offset << 6) >> 6;              // Sign-extend the 26-bit offset
-  writeRegister(14, registers.pc - 4);      // Save return address in LR (R14)
-  registers.pc += offset + 4;
-}
+uint32_t CPU::Shifter(uint32_t value, uint32_t type, uint32_t amount, bool& carryout) {
+  switch (type) {
+    case 0:  // LSL (Logical Shift Left)
+      carryout = (amount > 0) ? (value & (1 << (32 - amount))) : false;
+      value <<= amount;
+      break;
+    case 1:  // LSR (Logical Shift Right)
+      carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
+      value = (amount == 0) ? 0 : (value >> amount);
+      break;
+    case 2:  // ASR (Arithmetic Shift Right)
+      carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
+      value = (amount == 0) ? (value >> 31) : ((int32_t)value >> amount);
+      break;
+    case 3:  // ROR (Rotate Right)
+      if (amount == 0) {
+        // RRX (Rotate Right with Extend)
 
-void CPU::executeArmBranch(uint32_t inst) {
-  int32_t offset = (inst & 0xFFFFFF) << 2;  // Extract 24-bit offset, multiply by 4
-  offset = (offset << 6) >> 6;              // Sign-extend the 26-bit offset
-  registers.pc += offset + 4;
-}
-
-void CPU::executeArmLoadStore(uint32_t inst) {
-  uint32_t opcode = (inst >> 20) & 0x1;   // Extract bits 27-20
-  uint32_t baseReg = (inst >> 16) & 0xF;  // Base register (Rn)
-  uint32_t destReg = (inst >> 12) & 0xF;  // Destination/source register (Rd)
-  uint32_t offset = inst & 0xFFF;         // Immediate offset
-  bool byte = (inst >> 22) & 1;
-
-  if (baseReg == 15) {
-    offset += 4;
-  }
-  uint32_t address = readRegister(baseReg) + offset;
-
-  switch (opcode) {
-    case 0x1:  // LDR (0x59)
-    {
-      if (byte) {
-        uint8_t value = memory.readByte(address);
-        writeRegister(destReg, value);
+        carryout = (value & 1);
+        value = (registers.cpsr & (1 << 29)) ? (value >> 1) | 0x80000000 : (value >> 1);
       } else {
-        uint32_t value = memory.readWord(address);
-        writeRegister(destReg, value);
+        carryout = (amount > 0) ? (value & (1 << (amount - 1))) : false;
+        value = (value >> amount) | (value << (32 - amount));
       }
       break;
-    }
-    case 0x0:  // STR (0x58)
-    {
-      if (byte) {
-        uint8_t value = readRegister(destReg);
-        memory.writeByte(address, value);
-      } else {
-        uint32_t value = readRegister(destReg);
-        memory.writeWord(address, value);
-      }
-      break;
-    }
-    default: {
-      std::cerr << "Unknown LDR/STR variant: 0x" << std::hex << inst << std::endl;
-      break;
-    }
+    default:
+      return value;
   }
+  return value;
 }
 
-void CPU::executeArmBlockTransfer(uint32_t inst) {
-  // Implementation of the ARM block transfer inst
-  std::cerr << "ARM Block Transfer inst: 0x" << std::hex << inst << std::endl;
-}
-
-void CPU::executeArmSoftwareInterrupt(uint32_t inst) {
-  std::cerr << "Software Interrupt: 0x" << std::hex << inst << std::endl;
-}
-
-void CPU::executeArmUndefined(uint32_t inst) {
-  std::cerr << "Unknown ARM inst: 0x" << std::hex << inst << std::endl;
-}
-
-void CPU::executeArmSWP(uint32_t inst) {
-  bool Byte = (inst >> 22) & 1;
-  uint32_t Rn = (inst >> 16) & 0xF;
-  uint32_t Rd = (inst >> 12) & 0xF;
-  uint32_t Rm = (inst & 0xF);
-
-  uint32_t address = readRegister(Rn);
-  uint32_t value = readRegister(Rm);
-
-  if (Byte) {
-    uint8_t data = memory.readByte(address);
-    memory.writeByte(address, value & 0xFF);
-    writeRegister(Rd, data);
+uint32_t CPU::selectOperand2(uint32_t inst, bool& carryOut) {
+  uint32_t operand2 = inst & 0xFFF;
+  carryOut = false;
+  if (inst & (1 << 25)) {
+    uint32_t imm = operand2 & 0xFF;                             // Lower 8 bits
+    uint32_t rotate = (operand2 >> 8) & 0xF;                    // Upper 4 bits specify rotation
+    return (imm >> (2 * rotate)) | (imm << (32 - 2 * rotate));  // Rotate right
   } else {
-    uint32_t data = memory.readWord(address);
-    memory.writeWord(address, value);
-    writeRegister(Rd, data);
+    uint32_t rm = operand2 & 0xF;
+    uint32_t shiftType = (inst >> 5) & 0x3;
+    uint32_t shiftAmount = (inst >> 7) & 0x1F;
+
+    return Shifter(readRegister(rm), shiftType, shiftAmount, carryOut);
   }
 }

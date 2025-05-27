@@ -27,7 +27,7 @@
       },
       "linux": {
         "args": [
-          "PROJECT_NAME= Tetris_Debug",
+          "PROJECT_NAME= CBA_Debug",
           "OBJS=src/*.cpp",
           "BUILD_MODE=DEBUG"
         ]
@@ -55,13 +55,13 @@
       },
       "osx": {
         "args": [
-          "PROJECT_NAME=$ Tetris_release",
+          "PROJECT_NAME=$ CBA_release",
           "OBJS=src/*.cpp"
         ]
       },
       "linux": {
         "args": [
-          "PROJECT_NAME=$ Tetris_release",
+          "PROJECT_NAME=$ CBA_release",
           "OBJS=src/*.cpp"
         ]
       },

@@ -38,3 +38,4 @@ app
 build/*
 bin/*
 test/*
+instruction_table.cpp

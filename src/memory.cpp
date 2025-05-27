@@ -143,7 +143,7 @@ void Memory::writeWord(uint32_t address, uint32_t value) {
   (*region)[offset + 3] = (value >> 24) & 0xFF;
 }
 
-uint32_t Memory::loadBinFile(const std::string &filename) {
+void Memory::loadBinFile(const std::string &filename) {
   std::cout << "Loading ROM file: " << filename << std::endl;
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
@@ -160,14 +160,12 @@ uint32_t Memory::loadBinFile(const std::string &filename) {
   file.read(reinterpret_cast<char *>(&rom[0]), size);
   file.close();
 
-  // Read the entry point address from the ROM header (offset 0xAC)
-  uint32_t entryPoint = rom[0xAC] | (rom[0xAD] << 8) | (rom[0xAE] << 16) | (rom[0xAF] << 24);
-  std::cout << "Entry point: 0x" << std::hex << entryPoint << std::endl;
-
-  return entryPoint;
+  std::cout << "ROM loaded successfully (" << size << " bytes)" << std::endl;
 }
 
-size_t Memory::getROMSize() const { return rom.size(); }
+size_t Memory::getROMSize() const {
+  return rom.size();
+}
 
 void Memory::dumpROM() const {
   std::cout << "Dumping ROM:" << std::endl;

@@ -28,7 +28,7 @@ class Memory {
   void writeByte(uint32_t address, uint8_t value);
 
   // For both ARM and Thumb modes
-  uint32_t loadBinFile(const std::string &filename);
+  void loadBinFile(const std::string &filename);
   size_t getROMSize() const;
   void dumpROM() const;
 };

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <ostream>
 
+#include "../headers/arm.hpp"  // Include ARM namespace
 #include "../headers/memory.hpp"
 
 CPU::CPU(Memory &mem)
@@ -44,13 +45,14 @@ void CPU::detectThumbinst() {
   }
 }
 
-// complex Register handling functions
+// Register handling functions
 uint32_t CPU::readRegister(int index) const {
   if (index < 0 || index > 15) {
     return 0;
   }
   return registers.r[index];
 }
+
 void CPU::writeRegister(int index, uint32_t value) {
   if (index < 0 || index > 15) {
     std::cout << "Invalid register index: " << index << std::endl;
@@ -58,7 +60,6 @@ void CPU::writeRegister(int index, uint32_t value) {
   }
   registers.r[index] = value;
 }
-
 void CPU::executeinst() {
   if ((registers.cpsr & 0x20) != 0) {
     // Thumb mode: 16-bit inst
@@ -71,7 +72,7 @@ void CPU::executeinst() {
     // The functions are defined in arm.cpp
     uint32_t inst = memory.readWord(registers.pc);
     registers.pc += 4;
-    decodeARM(inst);
+    ARM::decodeARM(this, &memory, inst);
   }
 }
 

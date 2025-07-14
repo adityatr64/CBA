@@ -4,7 +4,6 @@ ENTRY(_start)
 MEMORY
 {
   rom (rx) : ORIGIN = 0x08000000, LENGTH = 32M
-
 }
 SECTIONS
 {

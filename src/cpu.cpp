@@ -1,4 +1,4 @@
-#include "../headers/cpu.hpp"
+#include "../include/cpu.hpp"
 
 #include <stdint.h>
 
@@ -6,8 +6,8 @@
 #include <iostream>
 #include <ostream>
 
-#include "../headers/arm.hpp"  // Include ARM namespace
-#include "../headers/memory.hpp"
+#include "../include/arm.hpp"  // Include ARM namespace
+#include "../include/memory.hpp"
 
 CPU::CPU(Memory &mem)
     : memory(mem)  // Constructor

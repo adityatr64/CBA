@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "../headers/cpu.hpp"
-#include "../headers/memory.hpp"
+#include "../include/cpu.hpp"
+#include "../include/memory.hpp"
 /*
 I've split this to keep too much code accumulation in one file
 This file will contain the implementation of the Thumb CPU class methods.

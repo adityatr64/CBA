@@ -1,9 +1,9 @@
-#include "../headers/memory.hpp"
+#include "../include/memory.hpp"
 
 #include <fstream>
 #include <iostream>
 
-#include "../headers/cpu.hpp"
+#include "../include/cpu.hpp"
 
 // i Fucking hate little edian
 // I also hate myself

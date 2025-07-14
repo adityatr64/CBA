@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "../headers/cpu.hpp"
-#include "../headers/memory.hpp"
+#include "../include/cpu.hpp"
+#include "../include/memory.hpp"
 int main() {
   Memory memory;
   memory.loadBinFile("./bin/kernel.gba");

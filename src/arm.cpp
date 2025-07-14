@@ -1,9 +1,9 @@
-#include "../headers/arm.hpp"
+#include "../include/arm.hpp"
 
 #include <iostream>
 
-#include "../headers/cpu.hpp"
-#include "../headers/memory.hpp"
+#include "../include/cpu.hpp"
+#include "../include/memory.hpp"
 
 namespace ARM {
 
@@ -394,8 +394,8 @@ uint32_t selectOperand2(CPU* cpu, uint32_t inst, bool& carryOut) {
       return Shifter(cpu, cpu->readRegister(rm), shiftType, shiftAmount, carryOut);
     }
   }
+  return operand2;  // Default case
 }
-
 void updateFlags(CPU* cpu, uint32_t result, bool carry, bool overflow) {
   uint32_t& cpsr = cpu->getRegisters().cpsr;
   cpsr &= ~(0xF << 28);  // Clear N, Z, C, V flags (bits 28-31)

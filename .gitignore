@@ -12,6 +12,7 @@ out/
 
 # Ignore executable files
 *.exe
+*.pdb
 *.out
 
 # Ignore dependency files

@@ -24,7 +24,7 @@ out/
 *.swp
 
 # Ignore IDE specific files
-./.vscode/
+./.vscode/*
 .idea/
 *.code-workspace
 
@@ -40,3 +40,6 @@ build/*
 bin/*
 test/*
 instruction_table.cpp
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json

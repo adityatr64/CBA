@@ -65,6 +65,7 @@ uint32_t Memory::readWord(uint32_t address) const {
   }
 
   // Hopefully this will never happen
+  // It happened ALOT
 
   if (offset + 3 >= regionSize) {
     std::cerr << "readWord: OUT OF RANGE! Offset: 0x" << std::hex << offset

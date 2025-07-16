@@ -13,8 +13,8 @@ namespace ARM {
 typedef void (*InstructionHandler)(CPU* cpu, Memory* memory, uint32_t inst);
 
 struct InstructionEntry {
-  uint32_t mask;     // Bits that must match
-  uint32_t pattern;  // Expected bit pattern
+  uint32_t mask;    
+  uint32_t pattern;  
   InstructionHandler handler;
   const char* name;
 };
@@ -33,6 +33,14 @@ void executeArmBranchLink(CPU* cpu, uint32_t inst);
 void executeArmSoftwareInterrupt(uint32_t inst);
 void executeArmSWP(CPU* cpu, Memory* memory, uint32_t inst);
 void executeArmMultiply(CPU* cpu, uint32_t inst);
+
+// wrappers
+void wrappedExecuteArmBranch(CPU* cpu, Memory* memory, uint32_t inst);
+void wrappedExecuteArmMultiply(CPU* cpu, Memory* memory, uint32_t inst);
+void wrappedExecuteArmSWI(CPU* cpu, Memory* memory, uint32_t inst);
+void wrappedExecuteArmUndefined(CPU* cpu, Memory* memory, uint32_t inst);
+void wrappedExecuteArmBranchLink(CPU* cpu, Memory* memory, uint32_t inst);
+void wrappedExecuteArmALU(CPU* cpu, Memory* memory, uint32_t inst);
 
 // ARM helper functions
 void updateFlags(CPU* cpu, uint32_t result, bool carry, bool overflow);

@@ -4,82 +4,69 @@
 
 #include "../include/cpu.hpp"
 #include "../include/memory.hpp"
+#include "arm.hpp"
 
 namespace ARM {
 
+// Wrappers to match InstructionHandler type
+void wrappedExecuteArmBranch(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmBranch(cpu, inst);
+}
+
+void wrappedExecuteArmBranchLink(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmBranchLink(cpu, inst);
+}
+
+void wrappedExecuteArmALU(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmALU(cpu, inst);
+}
+
+void wrappedExecuteArmMultiply(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmMultiply(cpu, inst);
+}
+
+void wrappedExecuteArmUndefined(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmUndefined(inst);
+}
+
+void wrappedExecuteArmSWI(CPU* cpu, Memory* memory, uint32_t inst) {
+  executeArmSoftwareInterrupt(inst);
+}
+
+static const InstructionEntry armDispatchTable[] = {
+    {0x0FFFFFF0, 0x012FFF10, wrappedExecuteArmBranch, "BX"},
+    {0x0FBF0FFF, 0x010F0000, executeArmMRS, "MRS"},
+    {0x0FBFF000, 0x0129F000, executeArmMRSregister, "MRS(Register)"},
+    {0x0DBFF000, 0x0320F000, executeArmMRSimm, "MRS(Immediate)"},
+    {0x0FF00FF0, 0x01000090, executeArmSWP, "SWP"},
+    {0x0FC000F0, 0x00000090, wrappedExecuteArmMultiply, "MUL/MLA"},
+    {0x0F8000F0, 0x00800090, executeArmMultiplyLong, "Multiply Long"},
+    {0x0E4000F0, 0x004000B0, executeArmHalfWord, "Halfword/Sign Transfer"},
+
+    {0x0E000000, 0x0A000000, wrappedExecuteArmBranch, "Branch"},
+    {0x0E000000, 0x0B000000, wrappedExecuteArmBranchLink, "Branch with Link"},
+    {0x0C000000, 0x04000000, executeArmLoadStore, "Load/Store"},
+    {0x0C000000, 0x08000000, executeArmBlockTransfer, "Block Transfer"},
+    {0x0F000000, 0x0F000000, wrappedExecuteArmSWI, "SWI"},
+    {0x0C000000, 0x00000000, wrappedExecuteArmALU, "ALU"},
+
+    // Fallback
+    {0x00000000, 0x00000000, wrappedExecuteArmUndefined, "Undefined"}};
 void decodeARM(CPU* cpu, Memory* memory, uint32_t inst) {
   std::cout << "ARM inst: 0x" << std::hex << inst << std::endl;
   if (!checkCondition(cpu, inst) || inst == 0) {
     return;
   }
 
-  uint32_t instClass = (inst >> 26) & 0b11;
-
-  switch (instClass) {
-    case 0b00:  // Data Processing
-    {
-      if (((inst & 0xFFFFFFF) >> 4) == 0x012FFF1)  // Branch exchange
-      {
-        std::cout << "Branch and Exchange" << std::endl;
-        // executeArmBranchAndExchange();
-        break;
-      } else if (((inst >> 4) & 0xFF) == 0b00001001 &&
-                 ((inst >> 24) & 0x1) == 0b1)  // SWP (bits 11-4 == 1001, bits 24 == 1)
-      {
-        std::cout << "Swap" << std::endl;
-        executeArmSWP(cpu, memory, inst);
-        break;
-      } else if (((inst >> 4) & 0xF) == 0b1001)  // MUL/MLA (bits 7-4 == 1001)
-      {
-        executeArmMultiply(cpu, inst);
-        break;
-      } else if (((inst >> 4) & 0xF) == 0b1011)  // Single Data Transfer or Half-word transfer
-      {
-        if (((inst >> 4) & 0xF) == 0xD && ((inst >> 20) & 0xF) == 0x0) {
-          std::cout << "Load Double Word" << std::endl;
-          // executeArmLDRD(inst);
-        } else if (((inst >> 4) & 0xF) == 0xF && ((inst >> 20) & 0xF) == 0x0) {
-          std::cout << "Store Double Word" << std::endl;
-          // executeArmSTRD(inst);
-        } else if (((inst >> 5) & 0x3) == 0x1)  // Half-word and signed transfers
-        {
-          std::cout << "Half-word/Signed Data Transfer" << std::endl;
-          // executeArmHalfWordTransfer(inst);
-        } else  // Regular ARM ALU operation
-        {
-          std::cout << "Data Processing" << std::endl;
-          executeArmALU(cpu, inst);
-        }
-        break;
-      } else  // Regular ARM ALU operation
-      {
-        std::cout << "Data Processing" << std::endl;
-        executeArmALU(cpu, inst);
-        break;
-      }
-      break;
-    }
-    case 0b01:  // Load/Store
-    {
-      executeArmLoadStore(cpu, memory, inst);
-      break;
-    }
-    case 0b10:  // Block Data Transfer
-    {
-      executeArmBlockTransfer(cpu, memory, inst);
-      break;
-    }
-    case 0b11:  // SWI/co processor
-    {
-      std::cout << ((inst >> 24) & 0xF) << std::endl;
-      if (((inst >> 24) & 0xF) == 0xF) executeArmSoftwareInterrupt(inst);
-      break;
-    }
-    default: {
-      executeArmUndefined(inst);
-      break;
+  for (const auto& entry : armDispatchTable) {
+    if ((inst & entry.mask) == entry.pattern) {
+      std::cout << "Dispatch: " << entry.name << std::endl;
+      entry.handler(cpu, memory, inst);
+      return;
     }
   }
+
+  wrappedExecuteArmUndefined(cpu, memory, inst);  // fallback
 }
 
 bool checkCondition(CPU* cpu, uint32_t inst) {
@@ -143,6 +130,7 @@ bool checkCondition(CPU* cpu, uint32_t inst) {
       execute = false;
       break;
   }
+
   return execute;
 }
 
@@ -396,6 +384,7 @@ uint32_t selectOperand2(CPU* cpu, uint32_t inst, bool& carryOut) {
   }
   return operand2;  // Default case
 }
+
 void updateFlags(CPU* cpu, uint32_t result, bool carry, bool overflow) {
   uint32_t& cpsr = cpu->getRegisters().cpsr;
   cpsr &= ~(0xF << 28);  // Clear N, Z, C, V flags (bits 28-31)
@@ -408,4 +397,5 @@ void updateFlags(CPU* cpu, uint32_t result, bool carry, bool overflow) {
   if (overflow)  // Overflow Flag (V)
     cpsr |= (1 << 28);
 }
+
 }  // namespace ARM

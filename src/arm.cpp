@@ -134,6 +134,26 @@ bool checkCondition(CPU* cpu, uint32_t inst) {
   return execute;
 }
 
+void executeArmHalfWord(CPU* cpu, Memory* memory, uint32_t inst) {
+  // placeholder
+}
+
+void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst) {
+  // placeholder
+}
+
+void executeArmMRSregister(CPU* cpu, Memory* memory, uint32_t inst) {
+  // placeholder
+}
+
+void executeArmMRSimm(CPU* cpu, Memory* memory, uint32_t inst) {
+  // place holder
+}
+
+void executeArmMultiplyLong(CPU* cpu, Memory* memory, uint32_t inst) {
+  // placeholder
+}
+
 void executeArmBranchLink(CPU* cpu, uint32_t inst) {
   int32_t offset = (inst & 0xFFFFFF) << 2;             // Extract 24-bit offset, multiply by 4
   offset = (offset << 6) >> 6;                         // Sign-extend the 26-bit offset

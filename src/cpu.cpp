@@ -16,7 +16,8 @@ CPU::CPU(Memory &mem)
     registers.r[i] = 0;
   }
   registers.pc = ROM_START;
-  registers.cpsr = 0;  // Initialize CPSR (Thumb mode is off by default)
+  registers.cpsr = 0x00000010;  // Initialize CPSR as User (Thumb mode is off by default)
+  registers.spsr = 0;
 }
 
 void CPU::updateFlags(uint32_t result, bool carry, bool overflow) {

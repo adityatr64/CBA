@@ -5,9 +5,10 @@
 struct Registers {
   uint32_t r[16];  // 16 general-purpose registers (r0-r15)
   uint32_t cpsr;   // Current Program Status Register
-  uint32_t &sp;    // Stack Pointer (r13)
-  uint32_t &lr;    // Link Register (r14)
-  uint32_t &pc;    // Program Counter (r15)
+  uint32_t spsr;
+  uint32_t &sp;  // Stack Pointer (r13)
+  uint32_t &lr;  // Link Register (r14)
+  uint32_t &pc;  // Program Counter (r15)
   Registers() : sp(r[13]), lr(r[14]), pc(r[15]) {}
 };
 
@@ -21,13 +22,11 @@ class CPU {
  public:
   CPU(Memory &mem);
 
-  // === Core CPU Interface ===
   uint32_t readRegister(int index) const;
   void writeRegister(int index, uint32_t value);
   void executeinst();
   void run();
 
-  // === Register Access for External Modules ===
   Registers &getRegisters() {
     return registers;
   }
@@ -43,6 +42,5 @@ class CPU {
   void decodeThumb(uint16_t inst);
   void detectThumbinst();
 
-  // === Utility Functions ===
   void updateFlags(uint32_t result, bool carry, bool overflow);
 };

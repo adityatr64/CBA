@@ -34,8 +34,8 @@ void executeArmSoftwareInterrupt(uint32_t inst);
 void executeArmSWP(CPU* cpu, Memory* memory, uint32_t inst);
 void executeArmMultiply(CPU* cpu, uint32_t inst);
 void executeArmMultiplyLong(CPU* cpu, Memory* memory, uint32_t inst);
-void executeArmMRSimm(CPU* cpu, Memory* memory, uint32_t inst);
-void executeArmMRSregister(CPU* cpu, Memory* memory, uint32_t inst);
+void executeArmMSRimm(CPU* cpu, Memory* memory, uint32_t inst);
+void executeArmMSRregister(CPU* cpu, Memory* memory, uint32_t inst);
 void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst);
 void executeArmHalfWord(CPU* cpu, Memory* memory, uint32_t inst);
 

@@ -61,6 +61,7 @@ void CPU::writeRegister(int index, uint32_t value) {
   }
   registers.r[index] = value;
 }
+
 void CPU::executeinst() {
   if ((registers.cpsr & 0x20) != 0) {
     // Thumb mode: 16-bit inst

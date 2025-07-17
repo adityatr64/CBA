@@ -36,8 +36,8 @@ void wrappedExecuteArmSWI(CPU* cpu, Memory* memory, uint32_t inst) {
 static const InstructionEntry armDispatchTable[] = {
     {0x0FFFFFF0, 0x012FFF10, wrappedExecuteArmBranch, "BX"},
     {0x0FBF0FFF, 0x010F0000, executeArmMRS, "MRS"},
-    {0x0FBFF000, 0x0129F000, executeArmMRSregister, "MRS(Register)"},
-    {0x0DBFF000, 0x0320F000, executeArmMRSimm, "MRS(Immediate)"},
+    {0x0FBFF000, 0x0129F000, executeArmMSRregister, "MSR(Register)"},
+    {0x0DBFF000, 0x0320F000, executeArmMSRimm, "MSR(Immediate)"},
     {0x0FF00FF0, 0x01000090, executeArmSWP, "SWP"},
     {0x0FC000F0, 0x00000090, wrappedExecuteArmMultiply, "MUL/MLA"},
     {0x0F8000F0, 0x00800090, executeArmMultiplyLong, "Multiply Long"},
@@ -52,6 +52,7 @@ static const InstructionEntry armDispatchTable[] = {
 
     // Fallback
     {0x00000000, 0x00000000, wrappedExecuteArmUndefined, "Undefined"}};
+
 void decodeARM(CPU* cpu, Memory* memory, uint32_t inst) {
   std::cout << "ARM inst: 0x" << std::hex << inst << std::endl;
   if (!checkCondition(cpu, inst) || inst == 0) {
@@ -142,11 +143,11 @@ void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst) {
   // placeholder
 }
 
-void executeArmMRSregister(CPU* cpu, Memory* memory, uint32_t inst) {
+void executeArmMSRregister(CPU* cpu, Memory* memory, uint32_t inst) {
   // placeholder
 }
 
-void executeArmMRSimm(CPU* cpu, Memory* memory, uint32_t inst) {
+void executeArmMSRimm(CPU* cpu, Memory* memory, uint32_t inst) {
   // place holder
 }
 
@@ -154,8 +155,12 @@ void executeArmMultiplyLong(CPU* cpu, Memory* memory, uint32_t inst) {
   // placeholder
 }
 
+void executeArmBlockTransfer(CPU* cpu, Memory* memory, uint32_t inst) {
+  // placeholder
+}
+
 void executeArmBranchLink(CPU* cpu, uint32_t inst) {
-  int32_t offset = (inst & 0xFFFFFF) << 2;             // Extract 24-bit offset, multiply by 4
+  int32_t offset = EXTRACT_BITS(inst, 0, 24) << 2;     // Extract 24-bit offset, multiply by 4
   offset = (offset << 6) >> 6;                         // Sign-extend the 26-bit offset
   cpu->writeRegister(14, cpu->getRegisters().pc - 4);  // Save return address in LR (R14)
   cpu->getRegisters().pc += offset + 4;
@@ -167,22 +172,17 @@ void executeArmBranch(CPU* cpu, uint32_t inst) {
   cpu->getRegisters().pc += offset + 4;
 }
 
-void executeArmBlockTransfer(CPU* cpu, Memory* memory, uint32_t inst) {
-  // Implementation of the ARM block transfer inst
-  std::cerr << "ARM Block Transfer inst: 0x" << std::hex << inst << std::endl;
-}
-
 void executeArmSoftwareInterrupt(uint32_t inst) {
   std::cerr << "Software Interrupt: 0x" << std::hex << inst << std::endl;
   exit(0);
 }
 
 void executeArmLoadStore(CPU* cpu, Memory* memory, uint32_t inst) {
-  uint32_t opcode = (inst >> 20) & 0x1;   // Extract bits 27-20
-  uint32_t baseReg = (inst >> 16) & 0xF;  // Base register (Rn)
-  uint32_t destReg = (inst >> 12) & 0xF;  // Destination/source register (Rd)
-  uint32_t offset = inst & 0xFFF;         // Immediate offset
-  bool byte = (inst >> 22) & 1;
+  uint32_t opcode = EXTRACT_BITS(inst, 20, 1);   // Load/Store bit
+  uint32_t baseReg = EXTRACT_BITS(inst, 16, 4);  // Base register (Rn)
+  uint32_t destReg = EXTRACT_BITS(inst, 12, 4);  // Destination/source register (Rd)
+  uint32_t offset = EXTRACT_BITS(inst, 0, 12);   // Immediate offset
+  bool byte = CHECK_BIT(inst, 22);               // Byte/Word bit
 
   if (baseReg == 15) {
     offset += 4;
@@ -219,15 +219,11 @@ void executeArmLoadStore(CPU* cpu, Memory* memory, uint32_t inst) {
   }
 }
 
-void executeArmUndefined(uint32_t inst) {
-  std::cerr << "Unknown ARM inst: 0x" << std::hex << inst << std::endl;
-}
-
 void executeArmSWP(CPU* cpu, Memory* memory, uint32_t inst) {
-  bool Byte = (inst >> 22) & 1;
-  uint32_t Rn = (inst >> 16) & 0xF;
-  uint32_t Rd = (inst >> 12) & 0xF;
-  uint32_t Rm = (inst & 0xF);
+  bool Byte = CHECK_BIT(inst, 22);
+  uint32_t Rn = EXTRACT_BITS(inst, 16, 4);
+  uint32_t Rd = EXTRACT_BITS(inst, 12, 4);
+  uint32_t Rm = EXTRACT_BITS(inst, 0, 4);
 
   uint32_t address = cpu->readRegister(Rn);
   uint32_t value = cpu->readRegister(Rm);
@@ -244,12 +240,12 @@ void executeArmSWP(CPU* cpu, Memory* memory, uint32_t inst) {
 }
 
 void executeArmMultiply(CPU* cpu, uint32_t inst) {
-  bool accumulate = (inst >> 21) & 0x1;
+  bool accumulate = CHECK_BIT(inst, 21);
 
-  uint32_t Rd = (inst >> 16) & 0xF;
-  uint32_t Rn = (inst >> 12) & 0xF;
-  uint32_t Rs = (inst >> 8) & 0xF;
-  uint32_t Rm = (inst & 0xF);
+  uint32_t Rd = EXTRACT_BITS(inst, 16, 4);
+  uint32_t Rn = EXTRACT_BITS(inst, 12, 4);
+  uint32_t Rs = EXTRACT_BITS(inst, 8, 4);
+  uint32_t Rm = EXTRACT_BITS(inst, 0, 4);
 
   uint32_t operand1 = cpu->readRegister(Rm);
   uint32_t operand2 = cpu->readRegister(Rs);
@@ -384,6 +380,10 @@ uint32_t Shifter(CPU* cpu, uint32_t value, uint32_t type, uint32_t amount, bool&
       return value;
   }
   return value;
+}
+
+void executeArmUndefined(uint32_t inst) {
+  std::cerr << "Unknown ARM inst: 0x" << std::hex << inst << std::endl;
 }
 
 uint32_t selectOperand2(CPU* cpu, uint32_t inst, bool& carryOut) {

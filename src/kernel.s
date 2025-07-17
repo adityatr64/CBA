@@ -4,6 +4,7 @@
 .align 4
 _start:
     MOV r1, #10
+    swi 0
 
 .section .data
 .align 4

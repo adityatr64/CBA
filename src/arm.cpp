@@ -140,7 +140,12 @@ void executeArmHalfWord(CPU* cpu, Memory* memory, uint32_t inst) {
 }
 
 void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst) {
-  // placeholder
+  uint32_t rd = EXTRACT_BITS(inst, 12, 4);
+  bool spsr = CHECK_BIT(inst, 22);
+
+  uint32_t value = spsr ? cpu->getRegisters().spsr : cpu->getRegisters().cpsr;
+
+  cpu->writeRegister(rd, value);
 }
 
 void executeArmMSRregister(CPU* cpu, Memory* memory, uint32_t inst) {
@@ -178,36 +183,36 @@ void executeArmSoftwareInterrupt(uint32_t inst) {
 }
 
 void executeArmLoadStore(CPU* cpu, Memory* memory, uint32_t inst) {
-  uint32_t opcode = EXTRACT_BITS(inst, 20, 1);   // Load/Store bit
-  uint32_t baseReg = EXTRACT_BITS(inst, 16, 4);  // Base register (Rn)
-  uint32_t destReg = EXTRACT_BITS(inst, 12, 4);  // Destination/source register (Rd)
-  uint32_t offset = EXTRACT_BITS(inst, 0, 12);   // Immediate offset
-  bool byte = CHECK_BIT(inst, 22);               // Byte/Word bit
+  uint32_t opcode = EXTRACT_BITS(inst, 20, 1);  // Load/Store bit
+  uint32_t Rn = EXTRACT_BITS(inst, 16, 4);      // Base register (Rn)
+  uint32_t Rd = EXTRACT_BITS(inst, 12, 4);      // Destination/source register (Rd)
+  uint32_t offset = EXTRACT_BITS(inst, 0, 12);  // Immediate offset
+  bool byte = CHECK_BIT(inst, 22);              // Byte/Word bit
 
-  if (baseReg == 15) {
+  if (Rn == 15) {
     offset += 4;
   }
-  uint32_t address = cpu->readRegister(baseReg) + offset;
+  uint32_t address = cpu->readRegister(Rn) + offset;
 
   switch (opcode) {
     case 0x1:  // LDR (0x59)
     {
       if (byte) {
         uint8_t value = memory->readByte(address);
-        cpu->writeRegister(destReg, value);
+        cpu->writeRegister(Rd, value);
       } else {
         uint32_t value = memory->readWord(address);
-        cpu->writeRegister(destReg, value);
+        cpu->writeRegister(Rd, value);
       }
       break;
     }
     case 0x0:  // STR (0x58)
     {
       if (byte) {
-        uint8_t value = cpu->readRegister(destReg);
+        uint8_t value = cpu->readRegister(Rd);
         memory->writeByte(address, value);
       } else {
-        uint32_t value = cpu->readRegister(destReg);
+        uint32_t value = cpu->readRegister(Rd);
         memory->writeWord(address, value);
       }
       break;
@@ -270,10 +275,10 @@ void executeArmMultiply(CPU* cpu, uint32_t inst) {
 void executeArmALU(CPU* cpu, uint32_t inst) {
   bool carryout = false, overflow = false;
   uint32_t opcode = EXTRACT_BITS(inst, 21, 4);
-  uint32_t destReg = EXTRACT_BITS(inst, 12, 4);
-  uint32_t sourceReg = EXTRACT_BITS(inst, 16, 4);
+  uint32_t Rd = EXTRACT_BITS(inst, 12, 4);
+  uint32_t Rs = EXTRACT_BITS(inst, 16, 4);
   uint32_t operand2 = selectOperand2(cpu, inst, carryout);
-  uint32_t src = cpu->readRegister(sourceReg);
+  uint32_t src = cpu->readRegister(Rs);
   uint32_t result = 0;
 
   switch (opcode) {
@@ -348,7 +353,7 @@ void executeArmALU(CPU* cpu, uint32_t inst) {
       return;
   }
 
-  cpu->writeRegister(destReg, result);
+  cpu->writeRegister(Rd, result);
   if (inst & (1 << 20)) updateFlags(cpu, result, carryout, overflow);
 }
 
@@ -380,6 +385,7 @@ uint32_t Shifter(CPU* cpu, uint32_t value, uint32_t type, uint32_t amount, bool&
       return value;
   }
   return value;
+  // Yeah don't ask me , idk either it somehow works
 }
 
 void executeArmUndefined(uint32_t inst) {

@@ -149,7 +149,17 @@ void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst) {
 }
 
 void executeArmMSRregister(CPU* cpu, Memory* memory, uint32_t inst) {
-  // placeholder
+  bool spsr = CHECK_BIT(inst, 22);
+  uint8_t fieldMask = EXTRACT_BITS(inst, 16, 4);
+  uint32_t rm = EXTRACT_BITS(inst, 0, 4);
+
+  uint32_t value = cpu->readRegister(rm);
+  uint32_t& psr = spsr ? cpu->getRegisters().spsr : cpu->getRegisters().cpsr;
+
+  if (fieldMask & 0x1) psr = (psr & ~0x000000FF) | (value & 0x000000FF);  // Control
+  if (fieldMask & 0x2) psr = (psr & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
+  if (fieldMask & 0x4) psr = (psr & ~0x00FF0000) | (value & 0x00FF0000);  // Status
+  if (fieldMask & 0x8) psr = (psr & ~0xF0000000) | (value & 0xF0000000);  // Flags
 }
 
 void executeArmMSRimm(CPU* cpu, Memory* memory, uint32_t inst) {
@@ -395,20 +405,17 @@ void executeArmUndefined(uint32_t inst) {
 uint32_t selectOperand2(CPU* cpu, uint32_t inst, bool& carryOut) {
   uint32_t operand2 = EXTRACT_BITS(inst, 0, 12);
   carryOut = false;
-  if (inst & (1 << 25)) {
-    if (CHECK_BIT(inst, 25)) {
-      uint32_t imm = EXTRACT_BITS(operand2, 0, 8);
-      uint32_t rotate = EXTRACT_BITS(operand2, 8, 4);
-      return (imm >> (2 * rotate)) | (imm << (32 - 2 * rotate));
-    } else {
-      uint32_t rm = EXTRACT_BITS(operand2, 0, 4);
-      uint32_t shiftType = EXTRACT_BITS(inst, 5, 2);
-      uint32_t shiftAmount = EXTRACT_BITS(inst, 7, 5);
+  if (CHECK_BIT(inst, 25)) {
+    uint32_t imm = EXTRACT_BITS(operand2, 0, 8);
+    uint32_t rotate = EXTRACT_BITS(operand2, 8, 4);
+    return (imm >> (2 * rotate)) | (imm << (32 - 2 * rotate));
+  } else {
+    uint32_t rm = EXTRACT_BITS(operand2, 0, 4);
+    uint32_t shiftType = EXTRACT_BITS(inst, 5, 2);
+    uint32_t shiftAmount = EXTRACT_BITS(inst, 7, 5);
 
-      return Shifter(cpu, cpu->readRegister(rm), shiftType, shiftAmount, carryOut);
-    }
+    return Shifter(cpu, cpu->readRegister(rm), shiftType, shiftAmount, carryOut);
   }
-  return operand2;  // Default case
 }
 
 void updateFlags(CPU* cpu, uint32_t result, bool carry, bool overflow) {

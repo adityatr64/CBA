@@ -139,31 +139,94 @@ void executeArmHalfWord(CPU* cpu, Memory* memory, uint32_t inst) {
   // placeholder
 }
 
+// thanks google search,i dont remember the source sorry !!!
+
+// SPSR access in user mode is UNPREDICTABLE
+// Hardware ignores SPSR access in user mode
+// Control, Extension, and Status fields can only be modified in privileged modes
+// If in user mode, control/extension/status field writes are silently ignored
+
 void executeArmMRS(CPU* cpu, Memory* memory, uint32_t inst) {
   uint32_t rd = EXTRACT_BITS(inst, 12, 4);
   bool spsr = CHECK_BIT(inst, 22);
 
-  uint32_t value = spsr ? cpu->getRegisters().spsr : cpu->getRegisters().cpsr;
+  uint32_t mode = cpu->getRegisters().cpsr & 0x1F;
+  bool privileged = (mode != 0x10);
 
+  if (spsr && !privileged) {
+    cpu->writeRegister(rd, cpu->getRegisters().cpsr);
+    return;
+  }
+
+  uint32_t value = spsr ? cpu->getRegisters().spsr : cpu->getRegisters().cpsr;
   cpu->writeRegister(rd, value);
+}
+
+void executeArmMSRimm(CPU* cpu, Memory* memory, uint32_t inst) {
+  bool spsr = CHECK_BIT(inst, 22);
+  uint8_t fieldMask = EXTRACT_BITS(inst, 16, 4);
+  uint32_t immediate = EXTRACT_BITS(inst, 0, 8);
+  uint32_t rotate = EXTRACT_BITS(inst, 8, 4);
+
+  uint32_t value = (immediate >> (2 * rotate)) | (immediate << (32 - 2 * rotate));
+
+  uint32_t mode = cpu->getRegisters().cpsr & 0x1F;
+  bool privileged = (mode != 0x10);  // everything other than usermode basically
+
+  if (spsr) {
+    if (!privileged) {
+      return;
+    }
+    uint32_t& spsr_reg = cpu->getRegisters().spsr;
+    if (fieldMask & 0x1) spsr_reg = (spsr_reg & ~0x000000FF) | (value & 0x000000FF);  // Control
+    if (fieldMask & 0x2) spsr_reg = (spsr_reg & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
+    if (fieldMask & 0x4) spsr_reg = (spsr_reg & ~0x00FF0000) | (value & 0x00FF0000);  // Status
+    if (fieldMask & 0x8) spsr_reg = (spsr_reg & ~0xF0000000) | (value & 0xF0000000);  // Flags
+  } else {
+    uint32_t& cpsr = cpu->getRegisters().cpsr;
+
+    if (fieldMask & 0x8) {
+      cpsr = (cpsr & ~0xF0000000) | (value & 0xF0000000);
+    }
+
+    if (privileged) {
+      if (fieldMask & 0x1) cpsr = (cpsr & ~0x000000FF) | (value & 0x000000FF);  // Control
+      if (fieldMask & 0x2) cpsr = (cpsr & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
+      if (fieldMask & 0x4) cpsr = (cpsr & ~0x00FF0000) | (value & 0x00FF0000);  // Status
+    }
+  }
 }
 
 void executeArmMSRregister(CPU* cpu, Memory* memory, uint32_t inst) {
   bool spsr = CHECK_BIT(inst, 22);
   uint8_t fieldMask = EXTRACT_BITS(inst, 16, 4);
   uint32_t rm = EXTRACT_BITS(inst, 0, 4);
-
   uint32_t value = cpu->readRegister(rm);
-  uint32_t& psr = spsr ? cpu->getRegisters().spsr : cpu->getRegisters().cpsr;
+  uint32_t mode = cpu->getRegisters().cpsr & 0x1F;
+  bool privileged = (mode != 0x10);  // 0x10 = User mode, all others are privileged
 
-  if (fieldMask & 0x1) psr = (psr & ~0x000000FF) | (value & 0x000000FF);  // Control
-  if (fieldMask & 0x2) psr = (psr & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
-  if (fieldMask & 0x4) psr = (psr & ~0x00FF0000) | (value & 0x00FF0000);  // Status
-  if (fieldMask & 0x8) psr = (psr & ~0xF0000000) | (value & 0xF0000000);  // Flags
-}
+  if (spsr) {
+    if (!privileged) {
+      return;
+    }
+    uint32_t& spsr_reg = cpu->getRegisters().spsr;
+    if (fieldMask & 0x1) spsr_reg = (spsr_reg & ~0x000000FF) | (value & 0x000000FF);  // Control
+    if (fieldMask & 0x2) spsr_reg = (spsr_reg & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
+    if (fieldMask & 0x4) spsr_reg = (spsr_reg & ~0x00FF0000) | (value & 0x00FF0000);  // Status
+    if (fieldMask & 0x8) spsr_reg = (spsr_reg & ~0xF0000000) | (value & 0xF0000000);  // Flags
+  } else {
+    uint32_t& cpsr = cpu->getRegisters().cpsr;
 
-void executeArmMSRimm(CPU* cpu, Memory* memory, uint32_t inst) {
-  // place holder
+    if (fieldMask & 0x8) {
+      cpsr = (cpsr & ~0xF0000000) | (value & 0xF0000000);
+    }
+
+    if (privileged) {
+      if (fieldMask & 0x1) cpsr = (cpsr & ~0x000000FF) | (value & 0x000000FF);  // Control
+      if (fieldMask & 0x2) cpsr = (cpsr & ~0x0000FF00) | (value & 0x0000FF00);  // Extension
+      if (fieldMask & 0x4) cpsr = (cpsr & ~0x00FF0000) | (value & 0x00FF0000);  // Status
+    }
+  }
 }
 
 void executeArmMultiplyLong(CPU* cpu, Memory* memory, uint32_t inst) {
